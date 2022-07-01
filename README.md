@@ -1,2 +1,2 @@
-# leeds-2023-sprout
+# sprout
 Repo for processing data from sprout social 
