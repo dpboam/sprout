@@ -1,54 +1,39 @@
 import pandas as pd
 
-def removeCommas(data,commaColumns):
-    for col in commaColumns:                         
-            data[col] = [float(str(cell).replace(",","")) for cell in data[col]]
-            data[col] = data[col].astype(int)
+def removePercentSigns(data):   
+    for col in list(data.columns[1:]):
+        data[col] = data[col].astype('string').str.replace("%","").astype(data[col].dtype)
+
+def makeFloatNullableInt(data):
+    for col in list(data.columns[1:]):
+        if(data[col].dtype == "float64"):
+            data[col] = data[col].astype("Int64")
+
             
-
-def removePercentSigns(data,percentColumns):
-    
-    for col in percentColumns:
-        if data[col].dtype == "object":
-                data[col] = [float(str(cell).replace("%","")) for cell in data[col]]
-            
-                
-twitterClean = {"drop" : ["Twitter Profile"],
-                "rename" : {"Engagement Rate (per Impression)" : "Engagement Percentage"},
-                "commas"  : ["Followers","Following","Impressions","Net Follower Growth","Net Following Growth","Other Post Clicks","Video Views","Engagements"],
-                "percentage" : ["Engagement Rate (per Impression)"],
-                "date_format" : "%m-%d-%Y"}
-
-instagramClean = {"drop" : ["Instagram Profile"],
-                "rename" : {"Engagement Rate (per Impression)" : "Engagement Rate (%)"},
-                "commas"  : ["Followers","Following","Impressions"],
-                "percentage" : ["Engagement Rate (per Impression)"],
-                "date_format" : "%m-%d-%Y"}
-
-facebookClean = {"drop" : ["Facebook Page"],
-                "rename" : {"Engagement Rate (per Impression)" : "Engagement Rate (%)"},
-                "commas"  : ["Fans","Impressions","Organic Impressions","Page Likes"],
-                "percentage" : ["Engagement Rate (per Impression)"],
-                "date_format" : "%m-%d-%Y"}
-
-
-PATH = "data\\instagram-leeds-2023.csv"
+FILE = "linkedin-leeds-2023.csv"
+PATH_IN = "data\\org\\" + FILE
+PATH_OUT = "data\\clean\\" + FILE
 FORMAT = '%m-%d-%Y'
 ISO_FORMAT = "%Y-%m-%d"
-clean = instagramClean
 
-socialData = pd.read_csv(PATH)
-#socialData = pd.read_csv(PATH,thousands=",")
+clean = {"drop" : [1],
+         "rename" : {"Engagement Rate (per Impression)" : "Engagement Percentage"},
+         "date_format" : FORMAT,
+         }
+
+socialData = pd.read_csv(PATH_IN,thousands=",")
+#socialData = socialData.replace(to_replace=r'^\s*$', value="test", regex=True)
+
 socialData.fillna(0,inplace=True)
+print(socialData["Audience Top Job Functions"])
+
 # Drop columns
-socialData = socialData.drop(columns=clean["drop"])
+socialData.drop(socialData.columns[clean["drop"]],axis=1,inplace=True)
 
-#Remove commas from values that should be integer 
+#Remove Percetage Signs
+removePercentSigns(socialData)
 
-removeCommas(socialData,clean["commas"])
-
-#Remove Percetage
-removePercentSigns(socialData,clean["percentage"])
+makeFloatNullableInt(socialData)
 
 #Change Date Format
 socialData.Date = pd.to_datetime(socialData.Date,format=clean["date_format"])
@@ -57,10 +42,8 @@ socialData.Date = pd.to_datetime(socialData.Date,format=clean["date_format"])
 socialData = socialData.rename(columns=clean["rename"])
 socialData.columns = [c.replace(" ","-").lower() for c in socialData.columns]
 
+socialData.to_csv(PATH_OUT,date_format=ISO_FORMAT,index=False)
 
-socialData.to_csv("clean_" + PATH,date_format=ISO_FORMAT,index=False)
-
-print(list(socialData.columns))
 
 
 
