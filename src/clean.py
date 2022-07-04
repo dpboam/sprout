@@ -6,11 +6,18 @@ def removePercentSigns(data):
 
 def makeFloatNullableInt(data):
     for col in list(data.columns[1:]):
-        if(data[col].dtype == "float64"):
-            data[col] = data[col].astype("Int64")
+        if data[col].dtype == "float64":
+            if floatContainsIntsOnly(data[col]):
+                data[col] = data[col].astype("Int64")
 
+def floatContainsIntsOnly(column):
+    for f in list(column):
+        if not f.is_integer():
+            return False
+
+    return True
             
-FILE = "linkedin-leeds-2023.csv"
+FILE = "[social]-leeds-2023.csv"
 PATH_IN = "data\\org\\" + FILE
 PATH_OUT = "data\\clean\\" + FILE
 FORMAT = '%m-%d-%Y'
@@ -25,14 +32,13 @@ socialData = pd.read_csv(PATH_IN,thousands=",")
 #socialData = socialData.replace(to_replace=r'^\s*$', value="test", regex=True)
 
 socialData.fillna(0,inplace=True)
-print(socialData["Audience Top Job Functions"])
+#print(socialData["Audience Top Job Functions"])
 
 # Drop columns
 socialData.drop(socialData.columns[clean["drop"]],axis=1,inplace=True)
 
 #Remove Percetage Signs
 removePercentSigns(socialData)
-
 makeFloatNullableInt(socialData)
 
 #Change Date Format
