@@ -1,4 +1,6 @@
 import pandas as pd
+import os
+import sys
 
 def removePercentSigns(data):   
     for col in list(data.columns[1:]):
@@ -16,40 +18,38 @@ def floatContainsIntsOnly(column):
             return False
 
     return True
+
+
+def clean_file(path_in,path_out):
+
+    clean = {"drop" : [1],
+            "rename" : {"Engagement Rate (per Impression)" : "Engagement Percentage"},
+            "date-format-in" : '%m-%d-%Y',
+            "data-format-out" : '%Y-%m-%d'
+            }
             
-FILE = "[social]-leeds-2023.csv"
-PATH_IN = "data\\org\\" + FILE
-PATH_OUT = "data\\clean\\" + FILE
-FORMAT = '%m-%d-%Y'
-ISO_FORMAT = "%Y-%m-%d"
+    socialData = pd.read_csv(path_in,thousands=",")
+    socialData.fillna(0,inplace=True)
 
-clean = {"drop" : [1],
-         "rename" : {"Engagement Rate (per Impression)" : "Engagement Percentage"},
-         "date_format" : FORMAT,
-         }
+    socialData.drop(socialData.columns[clean["drop"]],axis=1,inplace=True)
+    removePercentSigns(socialData)
+    makeFloatNullableInt(socialData)
+    socialData.Date = pd.to_datetime(socialData.Date,format=clean["date-format-in"])
 
-socialData = pd.read_csv(PATH_IN,thousands=",")
-#socialData = socialData.replace(to_replace=r'^\s*$', value="test", regex=True)
+    socialData = socialData.rename(columns=clean["rename"])
+    socialData.columns = [c.replace(" ","-").lower() for c in socialData.columns]
 
-socialData.fillna(0,inplace=True)
-#print(socialData["Audience Top Job Functions"])
+    socialData.to_csv(path_out,date_format=clean["data-format-out"],index=False)
 
-# Drop columns
-socialData.drop(socialData.columns[clean["drop"]],axis=1,inplace=True)
+def clean_dir(path_in,path_out):
+    for f in os.listdir(path_in):
+        clean_file(path_in + f,path_out + f)
 
-#Remove Percetage Signs
-removePercentSigns(socialData)
-makeFloatNullableInt(socialData)
+if(__name__ == "__main__"):
+    path_in = sys.argv[1]
+    path_out = sys.argv[2]
 
-#Change Date Format
-socialData.Date = pd.to_datetime(socialData.Date,format=clean["date_format"])
-
-#Change Column Names
-socialData = socialData.rename(columns=clean["rename"])
-socialData.columns = [c.replace(" ","-").lower() for c in socialData.columns]
-
-socialData.to_csv(PATH_OUT,date_format=ISO_FORMAT,index=False)
-
-
-
-
+    if(os.path.isdir(path_in)):
+        clean_dir(path_in,path_out)
+    else:
+        clean_file(path_in,path_out)
