@@ -1,7 +1,7 @@
-from importlib.metadata import files
 import pandas as pd
 import yaml
 import sys
+import os
 
 def first(data,column):
     return list(data[column])[0]
@@ -24,11 +24,15 @@ def col_range(data,column):
 def total(data,column):
     return sum(data[column])
 
+def count(data,column):
+    return len(data[column])
+
 def average(data,column):
     return (sum(data[column]) / len(data[column]))
 
 def average_int(data,column):
     return (int)(sum(data[column]) / len(data[column]))
+
 
 stats = {
     "first" : first,
@@ -37,6 +41,7 @@ stats = {
     "max" : col_max,
     "min" : col_min,
     "range" : col_range,
+    "count" : count,
     "total" : total,
     "average" : average_int
 }
@@ -48,29 +53,38 @@ def get_metric(data,metric_labels):
 def get_metrics(data,metric_labels):
     return {m : get_metric(data,m) for m in metric_labels}
 
-def format(meta,metrics):
-    return meta | {"metrics" : {m : {"current" : metrics[m]} for m in metrics}}
+def format(metrics):
+    return {"metrics" : {m : metrics[m] for m in metrics}}
 
 def add_top_level_meta(tl_meta,summary,label="data-file"):
     tl = tl_meta | { "data-file" : summary}
     tl[label] = tl.pop("data-file")
     return tl
 
-def add_data_level_meta(dl,summary):
-    dl.pop("meta")
-    dl.pop("metrics")
-    dl.pop("path")
-    return dl | summary
+def get_summary_file(config):
+    data = pd.read_csv(config["path"])
+    metrics = get_metrics(data,config["metrics"])
+    return metrics #format(metrics)
 
-def get_summary(input):
+
+def get_summary_dir(config,file_key):
+    summary = {}
+    for file in os.listdir(config["path"]):
+        summary[file_key+"-"+file.replace(".csv","")] = get_summary_file({"path" : config["path"] + file, "metrics" : config["metrics"]})
+ 
+    return summary
+
+def get_summarys(input):
     summary = {}
     for file_key in input["data-file"].keys():
         config = input["data-file"][file_key]
-        data = pd.read_csv(config["path"])
-        meta = get_metrics(data,config["meta"])
-        metrics = get_metrics(data,config["metrics"])
-        summary[file_key] =  add_data_level_meta(config,format(meta,metrics))
+        if os.path.isfile(config["path"]):
+            summary[file_key] =  get_summary_file(config)
+        else:
+            summary = summary | get_summary_dir(config,file_key)
+
     return add_top_level_meta(input,summary,input["data-files-label"])
+
 
 def write_yaml(path,data):
     with open(path, 'w') as outfile:
@@ -81,9 +95,10 @@ def read_yaml(path):
         return yaml.safe_load(infile)
 
 def summary_yaml(input_path,output_path):
-    write_yaml(output_path,get_summary(read_yaml(input_path)))
+    write_yaml(output_path,get_summarys(read_yaml(input_path)))
 
 if(__name__ == "__main__"):
     yaml_path_in = sys.argv[1]  #"yaml\\input.yml"
     yaml_path_out = sys.argv[2] #"yaml\\sprout_summary.yml"
     summary_yaml(yaml_path_in,yaml_path_out)
+    
