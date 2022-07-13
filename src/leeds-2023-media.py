@@ -26,7 +26,7 @@ for col in list(kpi):
     kpi[col]= kpi[col].astype("Int64")
 
 
-kpi.to_csv("data\\kpi_test_2.csv")
+kpi.to_csv("data\\kpi_test_3.csv")
 
 media_data.filter(["Scope","Type","Date","Month"]).to_csv("data\\media-data.csv",index=False)
 
