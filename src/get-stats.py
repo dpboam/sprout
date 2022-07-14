@@ -79,13 +79,16 @@ def get_summary_file_group_by_date(config,file_key):
     summary = {}
     data = pd.read_csv(config["path"])
     column,period = config["group-by-date"].split("-")
-    data[column] = pd.to_datetime(data[column],format="%Y-%m-%d")
+    
+    data[column] = pd.to_datetime(data[column])
     data["period"] = data[column].dt.to_period(period)
+
     for p in data["period"].unique():
-        filtered_data = data[data[column].dt.to_period(period)]
+        filtered_data = data[data[column].dt.to_period(period) == p]
         metrics = get_metrics(filtered_data,config["metrics"])
-        summary(file_key)
-    return metrics #format(metrics)
+        summary[file_key+"-"+str(p)] = metrics
+
+    return summary #format(metrics)
 
 def get_summarys(input):
     summary = {}
@@ -93,7 +96,7 @@ def get_summarys(input):
         config = input["data-file"][file_key]
         if os.path.isfile(config["path"]):
             if "group-by-date" in config.keys():
-                summary[file_key] = get_summary_file_group_by_date(config)
+                summary = summary | get_summary_file_group_by_date(config,file_key)
             else:
                 summary[file_key] =  get_summary_file(config)
         else:
